@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GridFlow — 电网潮流与机组调度引擎</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>⚡ GridFlow</h1>
+    <div class="sub">电力系统潮流计算与机组调度引擎</div>
+    <button id="refresh-summary" class="btn">刷新网络摘要</button>
+  </header>
+
+  <section id="summary" class="card">
+    <h2>网络摘要</h2>
+    <pre id="summary-out">（点击“刷新网络摘要”）</pre>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>1. 建立母线</h2>
+      <label>ID<input id="bus-id" placeholder="B1" /></label>
+      <label>名称<input id="bus-name" placeholder="slack" /></label>
+      <label>类型
+        <select id="bus-type"><option value="slack">slack</option><option value="pv">pv</option><option value="pq">pq</option></select>
+      </label>
+      <label>额定电压 kV<input id="bus-vnom" type="number" step="any" value="138" /></label>
+      <label>电压下限 pu<input id="bus-vmin" type="number" step="any" value="0.95" /></label>
+      <label>电压上限 pu<input id="bus-vmax" type="number" step="any" value="1.05" /></label>
+      <label>指定电压 pu<input id="bus-vspec" type="number" step="any" value="1.0" /></label>
+      <button id="add-bus" class="btn primary">添加母线</button>
+      <pre id="bus-list">（无）</pre>
+    </div>
+
+    <div class="card">
+      <h2>2. 建立支路</h2>
+      <label>ID<input id="br-id" placeholder="L12" /></label>
+      <label>首端母线<input id="br-from" placeholder="B1" /></label>
+      <label>末端母线<input id="br-to" placeholder="B2" /></label>
+      <label>类型<select id="br-kind"><option value="line">line</option><option value="xformer">xformer</option></select></label>
+      <label>R pu<input id="br-r" type="number" step="any" value="0.01" /></label>
+      <label>X pu<input id="br-x" type="number" step="any" value="0.03" /></label>
+      <label>MVA上限<input id="br-mva" type="number" step="any" value="100" /></label>
+      <label>变比 tap<input id="br-tap" type="number" step="any" value="1.0" /></label>
+      <button id="add-br" class="btn primary">添加支路</button>
+      <pre id="br-list">（无）</pre>
+    </div>
+
+    <div class="card">
+      <h2>3. 建立发电机</h2>
+      <label>ID<input id="gen-id" placeholder="G1" /></label>
+      <label>母线<input id="gen-bus" placeholder="B1" /></label>
+      <label>Pmin MW<input id="gen-pmin" type="number" step="any" value="0" /></label>
+      <label>Pmax MW<input id="gen-pmax" type="number" step="any" value="200" /></label>
+      <label>爬坡 MW/周期<input id="gen-ramp" type="number" step="any" value="80" /></label>
+      <label>最小开机周期<input id="gen-minup" type="number" value="1" /></label>
+      <label>最小停机周期<input id="gen-mindown" type="number" value="1" /></label>
+      <label>Qmin Mvar<input id="gen-qmin" type="number" step="any" value="-100" /></label>
+      <label>Qmax Mvar<input id="gen-qmax" type="number" step="any" value="100" /></label>
+      <label>初始状态<select id="gen-status"><option value="offline">offline</option><option value="committed" selected>committed</option></select></label>
+      <button id="add-gen" class="btn primary">添加发电机</button>
+      <pre id="gen-list">（无）</pre>
+    </div>
+
+    <div class="card">
+      <h2>4. 负荷预测</h2>
+      <label>母线<input id="load-bus" placeholder="B4" /></label>
+      <label>周期<input id="load-period" type="number" value="1" /></label>
+      <label>有功 MW<input id="load-p" type="number" step="any" value="80" /></label>
+      <label>无功 Mvar<input id="load-q" type="number" step="any" value="20" /></label>
+      <button id="add-load" class="btn primary">录入负荷</button>
+    </div>
+
+    <div class="card">
+      <h2>5. 周期与调度</h2>
+      <label>备用要求 MW<input id="seed-reserve" type="number" step="any" value="10" /></label>
+      <button id="seed-period" class="btn">初始化周期</button>
+      <button id="advance" class="btn">推进周期</button>
+      <label>调度周期<input id="dispatch-period" type="number" value="1" /></label>
+      <button id="run-dispatch" class="btn primary">排布+求解潮流</button>
+      <button id="release" class="btn">放行周期</button>
+      <button id="reconcile" class="btn">重启重算</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>调度结果</h2>
+    <pre id="result-out">（尚未调度）</pre>
+  </section>
+
+  <section class="card">
+    <h2>越限清单</h2>
+    <pre id="violations-out">（无）</pre>
+  </section>
+
+  <section class="card">
+    <h2>机组状态</h2>
+    <label>机组ID<input id="status-gen" placeholder="G2" /></label>
+    <button id="gen-status" class="btn">查询状态</button>
+    <button id="commit-gen" class="btn">投运</button>
+    <button id="decommit-gen" class="btn">停运</button>
+    <pre id="gen-status-out">（无）</pre>
+  </section>
+
+  <section class="card">
+    <h2>线路停运/复役</h2>
+    <label>支路ID<input id="outage-id" placeholder="L25" /></label>
+    <button id="outage" class="btn">停运</button>
+    <button id="restore" class="btn">复役</button>
+  </section>
+
+  <section class="card">
+    <h2>审计事件</h2>
+    <button id="load-events" class="btn">载入事件</button>
+    <pre id="events-out">（无）</pre>
+  </section>
+
+  <footer>
+    <small>task137-gridflow · 交流牛顿-拉夫逊潮流 + 机组开停/经济调度 + SQLite 重启重算</small>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
