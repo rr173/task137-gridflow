@@ -1,0 +1,17 @@
+# Build artifacts & local databases
+gridflow
+gridflow.db
+gridflow.db-wal
+gridflow.db-shm
+*.db
+*.db-wal
+*.db-shm
+
+# Vendor is rebuilt in-image from go.mod/go.sum
+# (kept locally for -mod=vendor verification, excluded from the tarball)
+vendor/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
