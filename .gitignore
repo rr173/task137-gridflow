@@ -1,0 +1,13 @@
+# Local dependency snapshots are intentionally excluded: builds use Go module mode.
+vendor/
+
+# Build artifacts and local SQLite state.
+gridflow
+*.db
+*.db-wal
+*.db-shm
+
+# Editor and OS metadata.
+.DS_Store
+.idea/
+.vscode/
