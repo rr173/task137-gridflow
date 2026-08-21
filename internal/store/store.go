@@ -411,11 +411,14 @@ func GetGeneratorTx(tx DBTX, ctx context.Context, id string) (domain.Generator, 
 	return g, nil
 }
 
-// SetGeneratorStateTx updates a generator's status, counters and output.
+// SetGeneratorStateTx updates a generator's status, counters and output. The
+// counters are owned by the service layer (commit/decommit/advance set the
+// authoritative values); this persists them verbatim, without offsetting, so
+// transitions like commit (down→0, up→1) survive the round-trip.
 func SetGeneratorStateTx(tx DBTX, ctx context.Context, g domain.Generator) error {
 	_, err := tx.ExecContext(ctx,
 		`UPDATE generators SET status=?,up_periods=?,down_periods=?,p_output=? WHERE id=?`,
-		string(g.Status), g.UpPeriods, g.DownPeriods+1, g.POutput, g.ID)
+		string(g.Status), g.UpPeriods, g.DownPeriods, g.POutput, g.ID)
 	return err
 }
 

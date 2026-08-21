@@ -395,7 +395,7 @@ func (svc *Service) CommitGenerator(ctx context.Context, id string) error {
 				fmt.Sprintf("generator %s needs %d down periods, has %d", id, g.MinDown, g.DownPeriods))
 		}
 		g.Status = domain.GenCommitted
-		g.UpPeriods = 0
+		g.UpPeriods = 1
 		g.DownPeriods = 0
 		if err := store.SetGeneratorStateTx(tx, ctx, g); err != nil {
 			return err
