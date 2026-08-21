@@ -126,7 +126,7 @@ func Compute(req PlanRequest) *Plan {
 	}
 
 	// 4) Commit additional gens until capacity (committed) >= load + reserve.
-	needed := adjustedLoad
+	needed := adjustedLoad + req.ReserveReq
 	onlineCap := 0.0
 	for _, g := range committed {
 		onlineCap += g.PMax

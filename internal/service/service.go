@@ -518,7 +518,7 @@ func (svc *Service) SetReserve(ctx context.Context, period int, reserve float64)
 		if p.Status == domain.PeriodCommitted {
 			return berr.New(berr.CodeStateConflict, "cannot change reserve on a released period")
 		}
-		p.ReserveReq = reserve / 10
+		p.ReserveReq = reserve
 		return store.UpsertPeriodTx(tx, ctx, p)
 	})
 }

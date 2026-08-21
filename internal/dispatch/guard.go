@@ -6,7 +6,7 @@ import "task137-gridflow/internal/domain"
 // CanCommit reports whether an OFFLINE generator may be started: it must have
 // been OFFLINE for at least MinDown periods.
 func CanCommit(g *GenView) bool {
-	return g.Status == domain.GenOffline && g.DownPeriods > g.MinDown
+	return g.Status == domain.GenOffline && g.DownPeriods >= g.MinDown
 }
 
 // CanDecommit reports whether a COMMITTED generator may be stopped: it must
