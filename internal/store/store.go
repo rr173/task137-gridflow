@@ -463,13 +463,16 @@ func ListLoadsTx(tx DBTX, ctx context.Context, period int) ([]domain.Load, error
 
 // ---------------- Periods ----------------
 
-// UpsertPeriodTx inserts or updates a period inside a transaction.
+// UpsertPeriodTx inserts or updates a period inside a transaction. The period's
+// own Status is persisted (planned or committed), so a released period written
+// as committed stays committed — release and direct writes share one commit
+// semantics.
 func UpsertPeriodTx(tx DBTX, ctx context.Context, p domain.Period) error {
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO periods(seq,status,total_gen,total_load,total_loss,verdict,reserve_req)
 		 VALUES(?,?,?,?,?,?,?) ON CONFLICT(seq) DO UPDATE SET status=excluded.status,total_gen=excluded.total_gen,
 		 total_load=excluded.total_load,total_loss=excluded.total_loss,verdict=excluded.verdict,reserve_req=excluded.reserve_req`,
-		p.Seq, string(domain.PeriodPlanned), p.TotalGen, p.TotalLoad, p.TotalLoss, string(p.Verdict), p.ReserveReq)
+		p.Seq, string(p.Status), p.TotalGen, p.TotalLoad, p.TotalLoss, string(p.Verdict), p.ReserveReq)
 	return err
 }
 

@@ -536,7 +536,9 @@ func (svc *Service) ReleasePeriod(ctx context.Context, period int) error {
 		if p.Verdict != domain.VerdictFeasible {
 			return berr.New(berr.CodeStateConflict, "cannot release a rejected period")
 		}
-		p.Status = domain.PeriodPlanned
+		// lock the period: a released period is committed (immutable) and
+		// must never be re-dispatched or recomputed.
+		p.Status = domain.PeriodCommitted
 		if err := store.UpsertPeriodTx(tx, ctx, p); err != nil {
 			return err
 		}

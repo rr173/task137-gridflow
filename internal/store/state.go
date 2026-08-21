@@ -14,13 +14,15 @@ import (
 
 // ---------------- Events ----------------
 
-// AppendEventTx writes an audit event inside a transaction.
+// AppendEventTx writes an audit event inside a transaction. The event's own
+// kind is persisted so each audit entry carries its true type (release,
+// dispatch, outage, …), not a single hardcoded value.
 func AppendEventTx(tx DBTX, ctx context.Context, period int, kind domain.EventKind, payload any) error {
 	pj, err := json.Marshal(payload)
 	if err != nil {
 		pj = []byte(`{}`)
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO events(period,kind,payload) VALUES(?,?,?)`, period, string(domain.EventAdvance), string(pj))
+	_, err = tx.ExecContext(ctx, `INSERT INTO events(period,kind,payload) VALUES(?,?,?)`, period, string(kind), string(pj))
 	return err
 }
 
