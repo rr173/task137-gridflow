@@ -85,7 +85,9 @@ func Build(buses []string, branches []domain.Branch) (*Matrix, error) {
 		if i == j {
 			return nil, fmt.Errorf("ybus: branch %s from==to %s", br.ID, br.FromBus)
 		}
-		tap := 1.0
+		// Off-nominal tap ratio (real) on the From side. A zero tap is treated
+		// as 1.0 (untapped), matching the network-assembly normalization.
+		tap := br.Tap
 		if tap == 0 {
 			tap = 1.0
 		}

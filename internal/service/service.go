@@ -364,7 +364,7 @@ func buildNetwork(buses []domain.Bus, branches []domain.Branch, gens []domain.Ge
 	for _, br := range branches {
 		net.Branches = append(net.Branches, &powerflow.BranchEdge{
 			ID: br.ID, From: br.FromBus, To: br.ToBus,
-			R: br.R, X: br.X, BShunt: br.BShunt, Tap: 1.0,
+			R: br.R, X: br.X, BShunt: br.BShunt, Tap: br.Tap,
 			MVALimit: br.MVALimit, InService: br.InService,
 		})
 	}

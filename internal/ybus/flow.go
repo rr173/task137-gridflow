@@ -12,7 +12,10 @@ import (
 // BranchFlow computes the complex power (pu) flowing into a branch at the From
 // end and at the To end, using the branch's own π-model. Returns Sfrom, Sto.
 func BranchFlow(br domain.Branch, vFrom, vTo complex128) (complex128, complex128) {
-	tap := 1.0
+	// Off-nominal tap ratio (real) on the From side. A zero tap is treated as
+	// 1.0 (untapped), matching the network-assembly normalization so the
+	// branch-flow model uses the same tap as the Ybus and the assembly.
+	tap := br.Tap
 	if tap == 0 {
 		tap = 1.0
 	}
