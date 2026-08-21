@@ -445,7 +445,7 @@ func (svc *Service) OutageBranch(ctx context.Context, id string) error {
 			return berr.Wrap(err)
 		}
 		period := svc.currentPeriodSeq(ctx)
-		return store.AppendEventTx(tx, ctx, period, domain.EventRestore, map[string]any{"branch": id})
+		return store.AppendEventTx(tx, ctx, period, domain.EventOutage, map[string]any{"branch": id})
 	})
 }
 

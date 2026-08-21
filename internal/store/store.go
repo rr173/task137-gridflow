@@ -328,9 +328,10 @@ func ListBranchesTx(tx DBTX, ctx context.Context) ([]domain.Branch, error) {
 }
 
 // SetBranchServiceTx toggles a branch's in_service flag inside a transaction.
+// inService=true -> 1 (in service), inService=false -> 0 (out of service).
 func SetBranchServiceTx(tx DBTX, ctx context.Context, id string, inService bool) error {
 	svc := 0
-	if !inService {
+	if inService {
 		svc = 1
 	}
 	res, err := tx.ExecContext(ctx, `UPDATE branches SET in_service=? WHERE id=?`, svc, id)

@@ -71,7 +71,7 @@ func Build(buses []string, branches []domain.Branch) (*Matrix, error) {
 	}
 	m := &Matrix{Y: y, n: n, idx: idx}
 	for _, br := range branches {
-		if br.InService {
+		if !br.InService {
 			continue
 		}
 		i, ok := idx.At(br.FromBus)
