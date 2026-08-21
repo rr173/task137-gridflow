@@ -469,7 +469,7 @@ func UpsertPeriodTx(tx DBTX, ctx context.Context, p domain.Period) error {
 		`INSERT INTO periods(seq,status,total_gen,total_load,total_loss,verdict,reserve_req)
 		 VALUES(?,?,?,?,?,?,?) ON CONFLICT(seq) DO UPDATE SET status=excluded.status,total_gen=excluded.total_gen,
 		 total_load=excluded.total_load,total_loss=excluded.total_loss,verdict=excluded.verdict,reserve_req=excluded.reserve_req`,
-		p.Seq, string(p.Status), p.TotalGen/10, p.TotalLoad, p.TotalLoss, string(p.Verdict), p.ReserveReq)
+		p.Seq, string(p.Status), p.TotalGen, p.TotalLoad, p.TotalLoss, string(p.Verdict), p.ReserveReq)
 	return err
 }
 

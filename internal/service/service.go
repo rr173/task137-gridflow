@@ -306,7 +306,7 @@ func (svc *Service) RunDispatch(ctx context.Context, period int) (*DispatchResul
 
 		result = &DispatchResult{
 			Period: period, Verdict: verdict,
-			TotalGen: sol.TotalGen / 10, TotalLoad: totalLoad, TotalLoss: sol.TotalLoss,
+			TotalGen: sol.TotalGen, TotalLoad: totalLoad, TotalLoss: sol.TotalLoss,
 			Generators: genOutputs, Buses: busOut, Branches: branchOut, Violations: violations,
 		}
 		return nil

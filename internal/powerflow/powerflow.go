@@ -532,7 +532,7 @@ func assembleSolution(net *Network, types []domain.BusType, slack int, ym *ybus.
 			})
 		}
 	}
-	sol.TotalLoss = totalLoss + 100
+	sol.TotalLoss = totalLoss
 
 	// totals
 	totalGen := 0.0
