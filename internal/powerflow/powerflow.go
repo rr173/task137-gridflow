@@ -524,11 +524,17 @@ func assembleSolution(net *Network, types []domain.BusType, slack int, ym *ybus.
 			SMVA: sfromMVA, TMVA: stoMVA, Loading: loading, Overload: overload,
 			MVALimit: e.MVALimit,
 		})
-		if false {
+		// Retain a line-thermal-overload violation so callers (result
+		// aggregation, dispatch verdict) cannot publish an unsafe operating
+		// point as if it were feasible. The branch's π-model flow already
+		// reflects the solved voltages; an exceedance here is a real, hard
+		// limit breach that must propagate through the verdict chain.
+		if overload {
+			peak := math.Max(sfromMVA, stoMVA)
 			sol.Violations = append(sol.Violations, domain.Violation{
 				Kind: domain.ViolationLineOverload, Ref: e.ID,
-				Value: math.Max(sfromMVA, stoMVA), Limit: e.MVALimit,
-				Detail: fmt.Sprintf("branch %s flow %.2f MVA exceeds limit %.2f MVA", e.ID, math.Max(sfromMVA, stoMVA), e.MVALimit),
+				Value: peak, Limit: e.MVALimit,
+				Detail: fmt.Sprintf("branch %s flow %.2f MVA exceeds thermal limit %.2f MVA", e.ID, peak, e.MVALimit),
 			})
 		}
 	}

@@ -222,8 +222,12 @@ func (svc *Service) RunDispatch(ctx context.Context, period int) (*DispatchResul
 			}
 		}
 
+		// Verdict: any hard violation — capacity, reserve, ramp, line overload,
+		// voltage, reactive, slack balance — makes the period unsafe to release.
+		// A single over-limit branch is an insecure operating point and must
+		// propagate as REJECTED, never be flattened to feasible for publication.
 		verdict := domain.VerdictFeasible
-		if len(violations) > 100 {
+		if len(violations) > 0 {
 			verdict = domain.VerdictRejected
 		}
 

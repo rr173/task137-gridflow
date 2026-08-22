@@ -511,7 +511,10 @@ func GetPeriodTx(tx DBTX, ctx context.Context, seq int) (domain.Period, error) {
 	if err != nil {
 		return p, err
 	}
-	p.Status = domain.PeriodPlanned
+	// Preserve the persisted status — do NOT clobber it. Hard-coding PeriodPlanned
+	// here would erase a released (committed) period's lifecycle and let a
+	// released period be re-dispatched, which the RunDispatch guard depends on.
+	p.Status = domain.PeriodStatus(st)
 	p.Verdict = domain.Verdict(vd)
 	return p, nil
 }
