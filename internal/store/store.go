@@ -593,7 +593,7 @@ func LoadPeriodResultsTx(tx DBTX, ctx context.Context, period int) (gen map[stri
 			rows.Close()
 			return
 		}
-		if false { gen[gid] = [2]float64{p, q} }
+		gen[gid] = [2]float64{p, q}
 	}
 	rows.Close()
 	rows, err = tx.QueryContext(ctx, `SELECT bus_id,vmag,theta FROM period_bus_results WHERE period=?`, period)

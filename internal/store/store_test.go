@@ -129,14 +129,20 @@ func TestLoadAllRebuildsState(t *testing.T) {
 	if err := s.CreateBus(ctx, domain.Bus{ID: "B1", Type: domain.BusTypeSlack, VNom: 138}); err != nil {
 		t.Fatal(err)
 	}
+	if err := s.CreateBus(ctx, domain.Bus{ID: "B2", Type: domain.BusTypePQ, VNom: 138}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateBranch(ctx, domain.Branch{ID: "L1", FromBus: "B1", ToBus: "B2", X: 0.05, Tap: 1.0, MVALimit: 200, InService: true}); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.CreateGenerator(ctx, domain.Generator{ID: "G1", BusID: "B1", PMax: 100, Status: domain.GenCommitted, UpPeriods: 3}); err != nil {
 		t.Fatal(err)
 	}
 	_ = s.SetState(ctx, "current_period", "2")
-	if err := UpsertPeriodTx(s.db, ctx, domain.Period{Seq: 1, Status: domain.PeriodPlanned, Verdict: domain.VerdictFeasible}); err != nil {
+	if err := UpsertPeriodTx(s.db, ctx, domain.Period{Seq: 1, Status: domain.PeriodPlanned, Verdict: domain.VerdictFeasible, TotalLoad: 80}); err != nil {
 		t.Fatal(err)
 	}
-	if err := UpsertPeriodTx(s.db, ctx, domain.Period{Seq: 2, Status: domain.PeriodPlanned, Verdict: domain.VerdictRejected}); err != nil {
+	if err := UpsertPeriodTx(s.db, ctx, domain.Period{Seq: 2, Status: domain.PeriodPlanned, Verdict: domain.VerdictRejected, TotalLoad: 70}); err != nil {
 		t.Fatal(err)
 	}
 	snap, err := s.LoadAll(ctx)
@@ -152,6 +158,10 @@ func TestLoadAllRebuildsState(t *testing.T) {
 	if len(snap.Periods) != 2 {
 		t.Errorf("periods=%d want 2", len(snap.Periods))
 	}
+	// branches must be rebuilt (were silently dropped before)
+	if len(snap.Branches) != 1 || snap.Branches[0].ID != "L1" {
+		t.Errorf("branches not rebuilt: %+v", snap.Branches)
+	}
 }
 
 func TestResetAll(t *testing.T) {
@@ -166,5 +176,48 @@ func TestResetAll(t *testing.T) {
 	got, _ := s.ListBuses(ctx)
 	if len(got) != 0 {
 		t.Errorf("after reset len=%d want 0", len(got))
+	}
+}
+
+// TestLoadPeriodResultsRoundTripsGenOutputs guards the saved-dispatch generator
+// snapshot: persisting gen outputs then reading them back must return every
+// generator's P/Q (they were silently dropped before).
+func TestLoadPeriodResultsRoundTripsGenOutputs(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	genIn := map[string][2]float64{
+		"G1": {120.5, 30.2},
+		"G2": {0, 0},
+		"G3": {55.0, -10.1},
+	}
+	busesIn := map[string][2]float64{"B1": {1.0, 0}, "B2": {0.98, -0.1}}
+	flowsIn := map[string]FlowRow{
+		"L1": {PFrom: 50, QFrom: 5, SMVA: 50.25, Loading: 25.1, Overload: false},
+	}
+	if err := s.InTx(ctx, func(tx DBTX) error {
+		return SavePeriodResultsTx(tx, ctx, 1, genIn, busesIn, flowsIn, nil)
+	}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	var gen map[string][2]float64
+	if err := s.InTx(ctx, func(tx DBTX) error {
+		var e error
+		gen, _, _, _, e = LoadPeriodResultsTx(tx, ctx, 1)
+		return e
+	}); err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if len(gen) != len(genIn) {
+		t.Fatalf("gen snapshot shrunk: got %d want %d (%+v)", len(gen), len(genIn), gen)
+	}
+	for id, pq := range genIn {
+		got, ok := gen[id]
+		if !ok {
+			t.Errorf("gen %s missing from loaded snapshot", id)
+			continue
+		}
+		if got[0] != pq[0] || got[1] != pq[1] {
+			t.Errorf("gen %s output mismatch: got %v want %v", id, got, pq)
+		}
 	}
 }

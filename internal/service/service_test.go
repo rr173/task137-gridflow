@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"task137-gridflow/internal/berr"
@@ -66,6 +67,29 @@ func TestRunDispatchFeasible(t *testing.T) {
 	}
 	if res.TotalGen < res.TotalLoad-1.0 {
 		t.Errorf("gen %.2f < load %.2f", res.TotalGen, res.TotalLoad)
+	}
+}
+
+// TestRunDispatchPersistsTotalLoad guards the saved-dispatch total-load
+// invariant: the persisted value (read back via GetDispatch without a
+// re-reconcile) must equal the live dispatch result, not a shrunk fraction of it.
+func TestRunDispatchPersistsTotalLoad(t *testing.T) {
+	svc, _ := newService(t)
+	seedFiveBus(t, svc)
+	ctx := context.Background()
+	if err := svc.store.UpsertLoad(ctx, domain.Load{BusID: "B3", Period: 1, PMW: 80, QMvar: 20}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := svc.RunDispatch(ctx, 1)
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+	got, err := svc.GetDispatch(ctx, 1)
+	if err != nil {
+		t.Fatalf("get dispatch: %v", err)
+	}
+	if math.Abs(got.TotalLoad-res.TotalLoad) > 1e-6 {
+		t.Errorf("persisted total_load shrunk: got %f want %f", got.TotalLoad, res.TotalLoad)
 	}
 }
 
@@ -173,5 +197,72 @@ func TestReconcileNoPlannedPeriod(t *testing.T) {
 	}
 	if msg == "" {
 		t.Error("expected non-empty reconcile message")
+	}
+}
+
+// TestReconcilePreservesSavedSnapshot guards the restart path: after a
+// dispatch is persisted, reconciling the planned period must reproduce the
+// saved total load, generator outputs, and branch-flow snapshot — not silently
+// shrink them. (Reconcile recomputes power flow but must keep the saved
+// dispatch invariants intact.)
+func TestReconcilePreservesSavedSnapshot(t *testing.T) {
+	svc, _ := newService(t)
+	seedFiveBus(t, svc)
+	ctx := context.Background()
+	if err := svc.store.UpsertLoad(ctx, domain.Load{BusID: "B3", Period: 1, PMW: 80, QMvar: 20}); err != nil {
+		t.Fatal(err)
+	}
+	dispatched, err := svc.RunDispatch(ctx, 1)
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+
+	// capture saved generator outputs (P per committed gen) before reconcile
+	wantGen := map[string]float64{}
+	for _, g := range dispatched.Generators {
+		wantGen[g.ID] = g.POutput
+	}
+
+	if _, err := svc.Reconcile(ctx); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	got, err := svc.GetDispatch(ctx, 1)
+	if err != nil {
+		t.Fatalf("get dispatch: %v", err)
+	}
+	// total load must be preserved (was silently dropped before)
+	if math.Abs(got.TotalLoad-dispatched.TotalLoad) > 1e-6 {
+		t.Errorf("total_load not preserved: got %f want %f", got.TotalLoad, dispatched.TotalLoad)
+	}
+	// total gen must be preserved within solve tolerance
+	if math.Abs(got.TotalGen-dispatched.TotalGen) > 1e-2 {
+		t.Errorf("total_gen not preserved: got %f want %f", got.TotalGen, dispatched.TotalGen)
+	}
+	// generator outputs must round-trip through the snapshot
+	for _, g := range got.Generators {
+		if math.Abs(g.POutput-wantGen[g.ID]) > 1e-2 {
+			t.Errorf("gen %s output not preserved: got %f want %f", g.ID, g.POutput, wantGen[g.ID])
+		}
+	}
+	// branch snapshot must be preserved (count + flows)
+	if len(got.Branches) != len(dispatched.Branches) {
+		t.Errorf("branch snapshot shrunk: got %d want %d", len(got.Branches), len(dispatched.Branches))
+	}
+	for _, br := range dispatched.Branches {
+		var found *BranchOutput
+		for i := range got.Branches {
+			if got.Branches[i].ID == br.ID {
+				found = &got.Branches[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Errorf("branch %s missing from reconciled snapshot", br.ID)
+			continue
+		}
+		if math.Abs(found.SMVA-br.SMVA) > 1e-2 {
+			t.Errorf("branch %s SMVA not preserved: got %f want %f", br.ID, found.SMVA, br.SMVA)
+		}
 	}
 }

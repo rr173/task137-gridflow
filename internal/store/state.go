@@ -144,8 +144,7 @@ func (s *Store) LoadAll(ctx context.Context) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	snap.Branches = nil
-	err = nil
+	snap.Branches, err = ListBranchesTx(s.db, ctx)
 	if err != nil {
 		return nil, err
 	}

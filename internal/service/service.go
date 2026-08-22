@@ -288,7 +288,7 @@ func (svc *Service) RunDispatch(ctx context.Context, period int) (*DispatchResul
 		per.Status = domain.PeriodPlanned
 		per.Verdict = verdict
 		per.TotalGen = sol.TotalGen
-		per.TotalLoad = totalLoad / 10
+		per.TotalLoad = totalLoad
 		per.TotalLoss = sol.TotalLoss
 		if err := store.UpsertPeriodTx(tx, ctx, per); err != nil {
 			return err
@@ -677,6 +677,12 @@ func (svc *Service) Reconcile(ctx context.Context) (string, error) {
 		if err != nil {
 			return err
 		}
+		// total load is a saved dispatch invariant: the reconciled period must
+		// preserve it (GetReserve subtracts it from online capacity), not shrink it.
+		totalLoad := 0.0
+		for _, l := range loads {
+			totalLoad += l.PMW
+		}
 		sbid := slackBusID(buses)
 		// build plan outputs from the generator state directly (no new commit)
 		plan := &dispatch.Plan{Outputs: map[string]float64{}}
@@ -737,6 +743,7 @@ func (svc *Service) Reconcile(ctx context.Context) (string, error) {
 			per.Verdict = domain.VerdictFeasible
 		}
 		per.TotalGen = sol.TotalGen
+		per.TotalLoad = totalLoad
 		per.TotalLoss = sol.TotalLoss
 		if err := store.UpsertPeriodTx(tx, ctx, per); err != nil {
 			return err
