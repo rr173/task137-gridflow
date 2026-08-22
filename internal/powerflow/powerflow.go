@@ -547,7 +547,11 @@ func assembleSolution(net *Network, types []domain.BusType, slack int, ym *ybus.
 		}
 		totalLoad += domain.FromPU(b.PLoad)
 	}
-	sol.TotalGen = totalGen / 10
+	// totals — all on the same domain.PowerBase (MVA) base. The injected
+	// powers here are already in MW (SlackP/PGen/PLoad went through FromPU
+	// above), so TotalGen and TotalLoad share one power base with the branch
+	// flows and losses. No secondary rescaling at the result boundary.
+	sol.TotalGen = totalGen
 	sol.TotalLoad = totalLoad
 
 	// voltage violations (PQ buses)

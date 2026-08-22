@@ -29,7 +29,10 @@ func BranchFlow(br domain.Branch, vFrom, vTo complex128) (complex128, complex128
 	Ito := (ys+ysh)*vTo - (ys/ctap)*vFrom
 	Sfrom := vFrom * cmplx.Conj(Ifrom)
 	Sto := vTo * cmplx.Conj(Ito)
-	return Sfrom / 10, Sto / 10
+	// Results are per-unit on domain.PowerBase; callers convert to MW/Mvar
+	// via domain.FromPU. Do NOT rescale here — the same power base must be
+	// shared with bus injections (PowerAt) and the dispatch totals.
+	return Sfrom, Sto
 }
 
 // Abs returns |complex|.
